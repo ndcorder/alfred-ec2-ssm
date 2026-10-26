@@ -1,6 +1,6 @@
 # EC2 SSM for Alfred
 
-Find EC2 instances across all your AWS profiles and regions from Alfred, and open a Session Manager (SSM) shell on one in the terminal.
+Find EC2 instances across all your AWS profiles and regions from Alfred, and open a Session Manager (SSM) shell on one in your terminal.
 
 Profiles and regions are searched in parallel, and results are cached, so the list appears quickly after the first search. If one profile or region fails, its error is shown next to the instances that did load, with a hint about what to do.
 
@@ -10,7 +10,7 @@ Type `ec2` and words to filter by. A row matches when every word is found in the
 
 | Key | Action |
 |---|---|
-| ↩ | Start an SSM session in the terminal (running instances only) |
+| ↩ | Start an SSM session in your terminal (Alfred's Terminal setting). Running instances only. |
 | ⌘ ↩ | Copy the private IP |
 | ⌥ ↩ | Open the instance in the AWS console |
 | ⌘ C | Copy the instance id |
@@ -18,7 +18,7 @@ Type `ec2` and words to filter by. A row matches when every word is found in the
 
 The subtitle shows the instance id, type, private IP, and the profile and region it was found in.
 
-When an SSO profile has expired or missing credentials, its error row runs `aws sso login --profile <profile>` in the terminal on ↩.
+When an SSO profile has expired or missing credentials, its error row runs `aws sso login --profile <profile>` in your terminal on ↩.
 
 ## Configuration
 
@@ -48,10 +48,10 @@ Nothing is started, stopped or changed. An SSM session starts only when you pres
 
 - macOS with Alfred 5 and the Powerpack
 - `/usr/bin/python3` (installed with the Xcode Command Line Tools)
-- AWS CLI v2 at `/usr/local/bin/aws` (the location used by the official installer)
+- AWS CLI v2. Alfred does not use your shell's PATH, so the workflow uses the first `aws` it finds in `/usr/local/bin` (official installer), `/opt/homebrew/bin`, `~/.local/bin` and `/usr/bin`, in that order.
 - The Session Manager plugin for the AWS CLI, for SSM sessions
 - Instances with the SSM agent and an instance profile that allows Session Manager, and credentials that allow `ec2:DescribeInstances` and `ssm:StartSession`
-- Terminal actions use Alfred's Terminal setting.
+- Terminal actions use the app chosen in Alfred's Terminal setting (Terminal, iTerm or a custom script).
 
 ## Icons
 

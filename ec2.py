@@ -356,7 +356,7 @@ def error_items(failures, profiles=None):
     for (profile, kind), g in sorted(grouped.items()):
         title = "%s: profile %s (%s)" % (ERROR_TITLES[kind], profile, ", ".join(g["regions"]))
         if kind in ("expired", "invalid") and is_sso(profile, profiles):
-            items.append(message(title, "↩ run aws sso login --profile %s in iTerm" % profile,
+            items.append(message(title, "↩ run aws sso login --profile %s in your terminal" % profile,
                                  sso_login_command(profile), icon_name="sso"))
         else:
             items.append(message(title, ERROR_HINTS.get(kind, g["detail"]), icon_name=kind_icon(kind)))

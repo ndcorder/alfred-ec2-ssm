@@ -110,7 +110,7 @@ class Items(unittest.TestCase):
         self.assertEqual(item["mods"]["alt"]["arg"], ec2.console_url("eu-west-1", "i-1"))
 
     def test_stopped_instance_offers_no_ssm_but_keeps_other_actions(self):
-        # SSM to a stopped instance would only fail in a new iTerm window.
+        # SSM to a stopped instance would only fail in a new terminal window.
         item = ec2.instance_item(inst("i-1", state="stopped", name="web"))
         self.assertFalse(item["valid"])
         self.assertNotIn("arg", item)
@@ -131,7 +131,7 @@ class Commands(unittest.TestCase):
                          "/usr/local/bin/aws ssm start-session --target i-0abc --profile default --region us-east-2")
 
     def test_ssm_command_quotes_odd_profile_names(self):
-        # The arg goes straight into a shell in iTerm: a profile name must not inject commands.
+        # The arg goes straight into a shell in the terminal: a profile name must not inject commands.
         cmd = ec2.ssm_command(inst("i-1", profile="my prof;rm -rf ~"))
         self.assertEqual(shlex.split(cmd)[-3], "my prof;rm -rf ~")
 
@@ -533,7 +533,7 @@ class PlistWiring(unittest.TestCase):
 
     def test_each_action_goes_to_the_right_object(self):
         self.assertEqual(self.routes, {
-            0: "alfred.workflow.action.terminalcommand",        # ↩ SSM / sso login in iTerm
+            0: "alfred.workflow.action.terminalcommand",        # ↩ SSM / sso login in the terminal
             1048576: "alfred.workflow.output.clipboard",        # ⌘↩ copy private IP
             524288: "alfred.workflow.action.openurl",           # ⌥↩ console
         })

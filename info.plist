@@ -45,7 +45,7 @@
 	<key>createdby</key>
 	<string>Nicolas Corder</string>
 	<key>description</key>
-	<string>Find EC2 instances across AWS profiles and regions, connect through SSM in iTerm</string>
+	<string>Find EC2 instances across AWS profiles and regions, connect through SSM in your terminal (Alfred's Terminal setting)</string>
 	<key>disabled</key>
 	<false/>
 	<key>name</key>
@@ -154,16 +154,16 @@
 	<key>readme</key>
 	<string>ec2 [words]   List EC2 instances for every profile and region, filter by name, instance id, IP or type (all words must match).
   Running instances first, then by name.
-  ↩ open an SSM session in iTerm (running instances only)
+  ↩ open an SSM session in your terminal (Alfred's Terminal setting) (running instances only)
   ⌘↩ copy private IP · ⌥↩ open the instance in the AWS console · ⌘C copy instance id · ⌘L details
-  Error items: on an SSO profile with expired or invalid credentials, ↩ runs aws sso login --profile &lt;p&gt; in iTerm.
+  Error items: on an SSO profile with expired or invalid credentials, ↩ runs aws sso login --profile &lt;p&gt; in your terminal.
 
 Configuration (Configure Workflow):
   AWS_PROFILES   comma-separated profiles (empty = aws configure list-profiles)
   AWS_REGIONS    comma-separated regions for every profile (empty = each profile's configured region)
   EC2_CACHE_SECONDS   how long instance lists and profile/region lookups are cached (default 300)
 
-Needs /usr/local/bin/aws and /usr/local/bin/session-manager-plugin. Only read-only calls: ec2 describe-instances, aws configure get/list-profiles, and one sts get-caller-identity per profile when a region answers AuthFailure (to tell a region that is not enabled from bad credentials).
+Needs AWS CLI v2 (the first aws found in /usr/local/bin, /opt/homebrew/bin, ~/.local/bin, /usr/bin) and the Session Manager plugin. Only read-only calls: ec2 describe-instances, aws configure get/list-profiles, and one sts get-caller-identity per profile when a region answers AuthFailure (to tell a region that is not enabled from bad credentials).
 Cache: $alfred_workflow_cache (delete the files to force a refresh).
 Tests: /usr/bin/python3 -B -m unittest test_ec2</string>
 	<key>uidata</key>
