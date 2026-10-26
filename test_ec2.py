@@ -15,6 +15,13 @@ import ec2
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 
+def setUpModule():
+    # Tests must not depend on where, or whether, the AWS CLI is installed on this machine.
+    p = mock.patch.object(ec2, "AWS", "/usr/local/bin/aws")
+    p.start()
+    unittest.addModuleCleanup(p.stop)
+
+
 def raw_instance(iid, state="running", name=None, ip="10.0.0.1", itype="t3.micro", **extra):
     i = {"InstanceId": iid, "State": {"Name": state, "Code": 16}, "InstanceType": itype,
          "LaunchTime": "2026-10-01T10:00:00+00:00", "PlatformDetails": "Linux/UNIX"}
@@ -293,9 +300,6 @@ class ReviewRegressions(unittest.TestCase):
         patcher.start()
         self.addCleanup(patcher.stop)
         self.addCleanup(self.tmp.cleanup)
-        access = mock.patch("os.access", return_value=True)
-        access.start()
-        self.addCleanup(access.stop)
 
     def describe_calls(self, run):
         return [c[0][0] for c in run.call_args_list if c[0][0][1:3] == ["ec2", "describe-instances"]]
@@ -405,10 +409,18 @@ class AlwaysValidJson(unittest.TestCase):
             ec2.main()
         return json.loads("".join(c[0][0] for c in out.write.call_args_list))
 
-    def test_cli_missing(self):
-        with mock.patch("os.access", return_value=False):
+    def test_cli_missing_says_where_it_looked(self):
+        with mock.patch.object(ec2, "AWS", None), mock.patch.object(ec2.subprocess, "run") as run:
             items = self.run_main("web")["items"]
+        run.assert_not_called()
+        self.assertEqual(len(items), 1)
         self.assertEqual(items[0]["title"], "AWS CLI not found")
+        self.assertIn("Looked in /usr/local/bin, /opt/homebrew/bin, ~/.local/bin, /usr/bin", items[0]["subtitle"])
+        with mock.patch.object(ec2, "AWS", None), mock.patch.object(ec2.subprocess, "run") as run:
+            with self.assertRaises(ec2.AwsError) as cm:
+                ec2.run_aws(["sts", "get-caller-identity"])
+        run.assert_not_called()
+        self.assertEqual(cm.exception.kind, "missing")
 
     def test_unexpected_crash_still_prints_json(self):
         with mock.patch.object(ec2, "items_for", side_effect=KeyError("boom")):
@@ -450,13 +462,11 @@ class Icons(unittest.TestCase):
         self.assertEqual(self.path(ec2.build_items("", [], [])[0]), "icons/empty.png")
 
     def test_setup_problems(self):
-        with mock.patch.object(ec2.os, "access", return_value=False):
+        with mock.patch.object(ec2, "AWS", None):
             self.assertEqual(self.path(ec2.items_for("")[0]), "icons/error.png")
-        with mock.patch.object(ec2.os, "access", return_value=True), \
-                mock.patch.object(ec2, "resolve_targets", return_value=([], [])):
+        with mock.patch.object(ec2, "resolve_targets", return_value=([], [])):
             self.assertEqual(self.path(ec2.items_for("")[0]), "icons/hint.png")  # no profiles: how to set up
-        with mock.patch.object(ec2.os, "access", return_value=True), \
-                mock.patch.object(ec2, "resolve_targets", side_effect=ec2.AwsError("timeout", "slow")):
+        with mock.patch.object(ec2, "resolve_targets", side_effect=ec2.AwsError("timeout", "slow")):
             self.assertEqual(self.path(ec2.items_for("")[0]), "icons/warning.png")
         with mock.patch.object(ec2, "run_aws", side_effect=lambda a: "" if a[1] == "get" else "p1\n"), \
                 mock.patch.dict(os.environ, {"AWS_REGIONS": "", "AWS_PROFILES": ""}):
@@ -477,6 +487,30 @@ class Icons(unittest.TestCase):
         for name in names:
             self.assertIn(name, make_icons.JOBS)
             self.assertTrue(os.path.isfile(os.path.join(HERE, "icons", name + ".png")), name)
+
+
+class Discovery(unittest.TestCase):
+    """Alfred's PATH has none of these folders, so the workflow searches them itself."""
+
+    HOME = os.path.expanduser("~")
+    ORDER = ["/usr/local/bin/aws", "/opt/homebrew/bin/aws", HOME + "/.local/bin/aws", "/usr/bin/aws"]
+
+    def find(self, files, executable):
+        with mock.patch.object(ec2.os.path, "isfile", side_effect=lambda p: p in files), \
+                mock.patch.object(ec2.os, "access", side_effect=lambda p, mode: p in executable):
+            return ec2.find_aws()
+
+    def test_first_executable_in_search_order_wins(self):
+        # Official installer, Homebrew on Apple silicon, pip/pipx user install, system.
+        for i, path in enumerate(self.ORDER):
+            later = set(self.ORDER[i:])
+            self.assertEqual(self.find(later, later), path)
+
+    def test_non_executable_file_is_skipped(self):
+        self.assertEqual(self.find(set(self.ORDER), {self.ORDER[3]}), self.ORDER[3])
+
+    def test_nothing_found(self):
+        self.assertIsNone(self.find(set(), set()))
 
 
 class PlistWiring(unittest.TestCase):

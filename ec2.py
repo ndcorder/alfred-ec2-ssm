@@ -18,10 +18,24 @@ import tempfile
 import time
 from concurrent.futures import ThreadPoolExecutor
 
-AWS = "/usr/local/bin/aws"
+# Alfred's PATH has none of these, so look in each install location; the first executable wins:
+# the official installer, Homebrew on Apple silicon, pip/pipx user installs, then the system.
+AWS_DIRS = ("/usr/local/bin", "/opt/homebrew/bin", "~/.local/bin", "/usr/bin")
 CACHE_DIR = os.environ.get("alfred_workflow_cache", "/tmp/alfred-ec2-ssm")
 CALL_TIMEOUT = 25  # seconds per aws call; the CLI's own socket timeouts are lower
 CLI_TIMEOUTS = ["--cli-connect-timeout", "5", "--cli-read-timeout", "15"]
+
+
+def find_aws():
+    for d in AWS_DIRS:
+        path = os.path.join(os.path.expanduser(d), "aws")
+        if os.path.isfile(path) and os.access(path, os.X_OK):
+            return path
+    return None
+
+
+AWS = find_aws()  # once per run: Alfred starts the script fresh for every query
+LOOKED_IN = "Looked in %s" % ", ".join(AWS_DIRS)
 
 
 class AwsError(Exception):
@@ -35,6 +49,8 @@ class AwsError(Exception):
 
 def run_aws(args, timeout=CALL_TIMEOUT):
     """Run the aws CLI; return stdout or raise AwsError with a classified kind."""
+    if not AWS:
+        raise AwsError("missing", LOOKED_IN)
     env = dict(os.environ, AWS_PAGER="")
     try:
         p = subprocess.run([AWS] + args + ["--no-cli-pager"], capture_output=True, text=True,
@@ -409,8 +425,8 @@ def resolve_auth_failures(failures, instances):
 
 
 def items_for(query):
-    if not os.access(AWS, os.X_OK):
-        return [message(ERROR_TITLES["missing"], "Install AWS CLI v2 at %s" % AWS)]
+    if not AWS:
+        return [message(ERROR_TITLES["missing"], "%s · install AWS CLI v2" % LOOKED_IN)]
     try:
         targets, region_errors = resolve_targets()
     except AwsError as e:
